@@ -1,7 +1,7 @@
 [project]
 name = "cpe-guesser"
 version = "0.1.0"
-description = "Add your description here"
+description = "Library and tools to guess and manage CPE (Common Platform Enumeration) entries"
 readme = "README.md"
 requires-python = ">=3.13"
 dependencies = [
