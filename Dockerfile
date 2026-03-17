@@ -7,7 +7,7 @@ COPY . /app
 RUN <<EOF
 apk update
 apk add py3-pip
-pip install pipx
+pip install pipx --break-system-packages
 pipx install --global uv
 EOF
 
