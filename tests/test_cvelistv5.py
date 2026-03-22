@@ -63,15 +63,17 @@ class CVEListV5HandlerTestCase(unittest.TestCase):
         rdb = FakeRDB()
         rdb.zadd("rank:cpe", {"cpe:2.3:a:acme:widget": 3})
         rdb.zadd("rank:vendor_product", {"cpe:2.3:a:acme:widget": 3})
-        rdb.sadd("set:missing_words_from_cvelistv5", "widget")
+        rdb.sadd("set:missing_vendors_from_cvelistv5", "acme")
+        rdb.sadd("set:missing_products_from_cvelistv5", "widget")
         rdb.sadd("w:widget", "cpe:2.3:a:acme:widget")
 
         removed = reset_rank_state(rdb)
 
-        self.assertEqual(removed, 3)
+        self.assertEqual(removed, 4)
         self.assertNotIn("rank:cpe", rdb.sorted_sets)
         self.assertNotIn("rank:vendor_product", rdb.sorted_sets)
-        self.assertNotIn("set:missing_words_from_cvelistv5", rdb.sets)
+        self.assertNotIn("set:missing_vendors_from_cvelistv5", rdb.sets)
+        self.assertNotIn("set:missing_products_from_cvelistv5", rdb.sets)
         self.assertIn("w:widget", rdb.sets)
 
     def test_extracts_cpes_from_metadata_and_configurations(self):
@@ -175,8 +177,12 @@ class CVEListV5HandlerTestCase(unittest.TestCase):
             rdb.sorted_sets["rank:vendor_product"]["cpe:2.3:a:acme:widget"], 2
         )
         self.assertEqual(
-            rdb.sets["set:missing_words_from_cvelistv5"],
-            {"acme", "gadget", "widget"},
+            rdb.sets["set:missing_vendors_from_cvelistv5"],
+            {"acme"},
+        )
+        self.assertEqual(
+            rdb.sets["set:missing_products_from_cvelistv5"],
+            {"gadget", "widget"},
         )
 
     def test_index_words_adds_w_and_s_entries(self):
@@ -234,7 +240,11 @@ class CVEListV5HandlerTestCase(unittest.TestCase):
         handler = CVEListV5Handler(rdb)
         handler.process_ndjson_file(io.StringIO(json.dumps(record)))
 
-        self.assertEqual(rdb.sets["set:missing_words_from_cvelistv5"], {"gadget"})
+        self.assertEqual(
+            rdb.sets.get("set:missing_vendors_from_cvelistv5", set()),
+            set(),
+        )
+        self.assertEqual(rdb.sets["set:missing_products_from_cvelistv5"], {"gadget"})
 
     def test_skips_single_invalid_multiline_record_and_continues(self):
         record_one = {

@@ -3,9 +3,22 @@ import json
 from .base import CPEImportHandler
 
 
-def reset_rank_state(rdb, missing_word_key="set:missing_words_from_cvelistv5"):
+DEFAULT_MISSING_VENDOR_SET = "set:missing_vendors_from_cvelistv5"
+DEFAULT_MISSING_PRODUCT_SET = "set:missing_products_from_cvelistv5"
+
+
+def reset_rank_state(
+    rdb,
+    missing_vendor_key=DEFAULT_MISSING_VENDOR_SET,
+    missing_product_key=DEFAULT_MISSING_PRODUCT_SET,
+):
     """Delete the CVE v5 ranking keys so each import starts from a clean state."""
-    return rdb.delete("rank:cpe", "rank:vendor_product", missing_word_key)
+    return rdb.delete(
+        "rank:cpe",
+        "rank:vendor_product",
+        missing_vendor_key,
+        missing_product_key,
+    )
 
 
 class CVEListV5Handler(CPEImportHandler):
@@ -24,11 +37,13 @@ class CVEListV5Handler(CPEImportHandler):
         self,
         rdb,
         index_words=False,
-        missing_word_key="set:missing_words_from_cvelistv5",
+        missing_vendor_key=DEFAULT_MISSING_VENDOR_SET,
+        missing_product_key=DEFAULT_MISSING_PRODUCT_SET,
     ):
         super().__init__(rdb)
         self.index_words = index_words
-        self.missing_word_key = missing_word_key
+        self.missing_vendor_key = missing_vendor_key
+        self.missing_product_key = missing_product_key
 
     def _parse_impl(self, path):
         if not path.endswith(".ndjson"):
@@ -87,10 +102,21 @@ class CVEListV5Handler(CPEImportHandler):
             self.skipped += 1
             return
 
-        words = sorted(
-            {word for cpe in cpes for word in self.build_insert_words(cpe)[1]}
+        vendor_words = set()
+        product_words = set()
+        for cpe in cpes:
+            extracted = self.CPEExtractor(cpe)
+            vendor_words.update(self.canonize(extracted["vendor"]))
+            product_words.update(self.canonize(extracted["product"]))
+
+        self.collect_missing_words(
+            sorted(vendor_words),
+            self.missing_vendor_key,
         )
-        self.collect_missing_words(words, self.missing_word_key)
+        self.collect_missing_words(
+            sorted(product_words),
+            self.missing_product_key,
+        )
 
         if self.index_words:
             itemcount, wordcount = self.process_cpe_batch(cpes)
