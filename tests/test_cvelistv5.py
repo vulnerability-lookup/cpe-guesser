@@ -138,6 +138,40 @@ class CVEListV5HandlerTestCase(unittest.TestCase):
             rdb.sorted_sets["rank:vendor_product"]["cpe:2.3:a:acme:widget"], 2
         )
 
+    def test_skips_single_invalid_multiline_record_and_continues(self):
+        record_one = {
+            "containers": {
+                "cna": {
+                    "affected": [{"cpes": ["cpe:2.3:a:acme:widget:1.0:*:*:*:*:*:*:*"]}]
+                }
+            }
+        }
+        record_two = {
+            "containers": {
+                "cna": {
+                    "affected": [{"cpes": ["cpe:2.3:a:acme:gadget:2.0:*:*:*:*:*:*:*"]}]
+                }
+            }
+        }
+        payload = io.StringIO(
+            "\n".join(
+                [
+                    json.dumps(record_one),
+                    '{"containers":{"cna":{"affected":[{"cpes":["cpe:2.3:a:broken',
+                    json.dumps(record_two),
+                ]
+            )
+        )
+
+        rdb = FakeRDB()
+        handler = CVEListV5Handler(rdb)
+        handler.process_ndjson_file(payload)
+
+        self.assertEqual(handler.itemcount, 2)
+        self.assertEqual(handler.skipped, 1)
+        self.assertEqual(rdb.sorted_sets["rank:cpe"]["cpe:2.3:a:acme:widget"], 1)
+        self.assertEqual(rdb.sorted_sets["rank:cpe"]["cpe:2.3:a:acme:gadget"], 1)
+
 
 if __name__ == "__main__":
     unittest.main()
