@@ -112,6 +112,25 @@ class CPEImportHandler(ABC):
         pipeline.execute()
         return itemcount, 0
 
+    def collect_missing_words(self, words, missing_word_key, rdb=None):
+        """Record words that are not yet indexed in Valkey."""
+        if not missing_word_key or not words:
+            return 0
+
+        client = rdb or self.rdb
+        pipeline = client.pipeline(transaction=False)
+        new_words = 0
+
+        for word in words:
+            if client.exists(f"w:{word}"):
+                continue
+            pipeline.sadd(missing_word_key, word)
+            new_words += 1
+
+        if new_words:
+            pipeline.execute()
+        return new_words
+
     def record_progress(self, itemcount, wordcount):
         self.itemcount += itemcount
         self.wordcount += wordcount

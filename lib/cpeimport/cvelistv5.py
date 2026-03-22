@@ -15,6 +15,16 @@ class CVEListV5Handler(CPEImportHandler):
         "Expecting property name enclosed in double quotes",
     )
 
+    def __init__(
+        self,
+        rdb,
+        index_words=False,
+        missing_word_key="set:missing_words_from_cvelistv5",
+    ):
+        super().__init__(rdb)
+        self.index_words = index_words
+        self.missing_word_key = missing_word_key
+
     def _parse_impl(self, path):
         if not path.endswith(".ndjson"):
             raise ValueError(f"Unsupported file type: {path}")
@@ -72,7 +82,16 @@ class CVEListV5Handler(CPEImportHandler):
             self.skipped += 1
             return
 
-        itemcount, wordcount = self.process_rank_batch(cpes)
+        words = sorted(
+            {word for cpe in cpes for word in self.build_insert_words(cpe)[1]}
+        )
+        self.collect_missing_words(words, self.missing_word_key)
+
+        if self.index_words:
+            itemcount, wordcount = self.process_cpe_batch(cpes)
+        else:
+            itemcount, wordcount = self.process_rank_batch(cpes)
+
         self.record_progress(itemcount=itemcount, wordcount=wordcount)
 
     def _load_record(self, payload):

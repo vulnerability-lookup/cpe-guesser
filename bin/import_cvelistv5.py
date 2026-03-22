@@ -22,6 +22,8 @@ valkey_host = settings.get("valkey.host", "127.0.0.1")
 valkey_port = settings.get("valkey.port", 6379)
 valkey_db = settings.get("valkey.db", 8)
 
+DEFAULT_MISSING_WORD_SET = "set:missing_words_from_cvelistv5"
+
 rdb = valkey.Valkey(host=valkey_host, port=valkey_port, db=valkey_db)
 
 
@@ -40,7 +42,27 @@ if __name__ == "__main__":
         "--replace-rank",
         action="store_true",
         default=False,
-        help="Delete existing rank:cpe and rank:vendor_product sorted sets before importing.",
+        help=(
+            "Delete existing rank:cpe, rank:vendor_product, and the missing-word set "
+            "before importing."
+        ),
+    )
+    argparser.add_argument(
+        "--index-words",
+        action="store_true",
+        default=False,
+        help=(
+            "Also index vendor/product words into w:<word> and s:<word> like "
+            "bin/import.py does."
+        ),
+    )
+    argparser.add_argument(
+        "--missing-word-set",
+        default=DEFAULT_MISSING_WORD_SET,
+        help=(
+            "Valkey set name used to store words seen in CVE v5 CPEs that were "
+            "not already present in w:<word>."
+        ),
     )
     args = argparser.parse_args()
 
@@ -60,18 +82,24 @@ if __name__ == "__main__":
         cvelist_file = cvelist_path
 
     if args.replace_rank:
-        removed = rdb.delete("rank:cpe", "rank:vendor_product")
+        removed = rdb.delete("rank:cpe", "rank:vendor_product", args.missing_word_set)
         print(f"Deleted {removed} existing rank key(s) from the database.")
 
-    handler = CVEListV5Handler(rdb)
+    handler = CVEListV5Handler(
+        rdb,
+        index_words=args.index_words,
+        missing_word_key=args.missing_word_set,
+    )
     label = f"{handler.__class__.__name__}[{os.path.basename(cvelist_file)}]"
     print(f"Using {handler.__class__.__name__} to parse file {cvelist_file}...")
     handler.parse_file(cvelist_file, label=label)
 
     rank_size = rdb.zcard("rank:cpe")
     alias_size = rdb.zcard("rank:vendor_product")
+    missing_word_count = rdb.scard(args.missing_word_set)
     print(
         "Done! "
-        f"{rank_size} vendor/product tuples stored in rank:cpe and "
-        f"{alias_size} in rank:vendor_product."
+        f"{rank_size} vendor/product tuples stored in rank:cpe, "
+        f"{alias_size} in rank:vendor_product, and "
+        f"{missing_word_count} words tracked in {args.missing_word_set}."
     )
