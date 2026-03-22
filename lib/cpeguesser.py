@@ -49,4 +49,6 @@ class CPEGuesser:
             total_score = search_score + rank_score
             ranked.append((total_score, rank_score, cpe))
 
-        return [(total_score, cpe) for total_score, _, cpe in sorted(ranked, reverse=True)]
+        return [
+            (total_score, cpe) for total_score, _, cpe in sorted(ranked, reverse=True)
+        ]
