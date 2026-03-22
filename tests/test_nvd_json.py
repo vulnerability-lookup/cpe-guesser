@@ -77,9 +77,14 @@ class NVDCPEHandlerTestCase(unittest.TestCase):
         self.assertEqual(handler.itemcount, 2)
         self.assertEqual(handler.wordcount, 5)
         self.assertEqual(handler.skipped, 2)
-        self.assertEqual(rdb.sets["w:acme"], {"cpe:2.3:a:acme:widget", "cpe:2.3:a:acme:rocket_launcher"})
+        self.assertEqual(
+            rdb.sets["w:acme"],
+            {"cpe:2.3:a:acme:widget", "cpe:2.3:a:acme:rocket_launcher"},
+        )
         self.assertEqual(rdb.sorted_sets["rank:cpe"]["cpe:2.3:a:acme:widget"], 2)
-        self.assertEqual(rdb.sorted_sets["rank:cpe"]["cpe:2.3:a:acme:rocket_launcher"], 3)
+        self.assertEqual(
+            rdb.sorted_sets["rank:cpe"]["cpe:2.3:a:acme:rocket_launcher"], 3
+        )
 
     def test_serial_and_parallel_import_match(self):
         serial_rdb = FakeRDB()
