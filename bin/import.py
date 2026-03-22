@@ -25,6 +25,11 @@ valkey_db = settings.get("valkey.db", 8)
 rdb = valkey.Valkey(host=valkey_host, port=valkey_port, db=valkey_db)
 
 
+def default_worker_count():
+    cpu_count = os.cpu_count() or 1
+    return max(1, min(8, cpu_count))
+
+
 if __name__ == "__main__":
     argparser = argparse.ArgumentParser(
         description="Initializes the Redis database with CPE dictionary."
@@ -42,6 +47,18 @@ if __name__ == "__main__":
         action="store_true",
         default=False,
         help="Flush and repopulated the CPE database.",
+    )
+    argparser.add_argument(
+        "--workers",
+        type=int,
+        default=default_worker_count(),
+        help="Number of parallel workers to use for NVD JSON imports.",
+    )
+    argparser.add_argument(
+        "--batch-size",
+        type=int,
+        default=1000,
+        help="Number of products each worker processes per Redis pipeline batch.",
     )
     args = argparser.parse_args()
 
@@ -75,7 +92,11 @@ if __name__ == "__main__":
     _, ext = os.path.splitext(cpe_file)
     ext = ext.lower()
     if ext == ".tar" or ext == ".json":
-        handler = NVDCPEHandler(rdb)
+        handler = NVDCPEHandler(
+            rdb,
+            workers=max(1, args.workers),
+            batch_size=max(1, args.batch_size),
+        )
     elif ext == ".xml":
         handler = XMLCPEHandler(rdb)
     else:
