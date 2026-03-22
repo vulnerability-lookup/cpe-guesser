@@ -58,9 +58,7 @@ class CVEListV5HandlerTestCase(unittest.TestCase):
                     "nodes": [
                         {
                             "cpeMatch": [
-                                {
-                                    "criteria": "cpe:2.3:a:acme:gadget:*:*:*:*:*:*:*:*"
-                                },
+                                {"criteria": "cpe:2.3:a:acme:gadget:*:*:*:*:*:*:*:*"},
                                 {"criteria": "cpe:/a:legacy:thing:2.0"},
                             ]
                         }
@@ -100,9 +98,7 @@ class CVEListV5HandlerTestCase(unittest.TestCase):
                     "nodes": [
                         {
                             "cpeMatch": [
-                                {
-                                    "criteria": "cpe:2.3:a:acme:widget:*:*:*:*:*:*:*:*"
-                                }
+                                {"criteria": "cpe:2.3:a:acme:widget:*:*:*:*:*:*:*:*"}
                             ]
                         }
                     ]
