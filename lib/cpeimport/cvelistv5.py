@@ -2,7 +2,6 @@ import json
 
 from .base import CPEImportHandler
 
-
 DEFAULT_MISSING_VENDOR_SET = "set:missing_vendors_from_cvelistv5"
 DEFAULT_MISSING_PRODUCT_SET = "set:missing_products_from_cvelistv5"
 
