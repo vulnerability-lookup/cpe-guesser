@@ -3,6 +3,11 @@ import json
 from .base import CPEImportHandler
 
 
+def reset_rank_state(rdb, missing_word_key="set:missing_words_from_cvelistv5"):
+    """Delete the CVE v5 ranking keys so each import starts from a clean state."""
+    return rdb.delete("rank:cpe", "rank:vendor_product", missing_word_key)
+
+
 class CVEListV5Handler(CPEImportHandler):
     """Handler for CVE Record Format v5 NDJSON exports."""
 

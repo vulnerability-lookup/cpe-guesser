@@ -10,7 +10,7 @@ import valkey
 from dynaconf import Dynaconf
 
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
-from lib.cpeimport import CPEDownloader, CVEListV5Handler
+from lib.cpeimport import CPEDownloader, CVEListV5Handler, reset_rank_state
 
 # Configuration
 settings = Dynaconf(settings_files=["../config/settings.yaml"])
@@ -39,12 +39,12 @@ if __name__ == "__main__":
         help="Force downloading the CVE v5 NDJSON even if it already exists locally.",
     )
     argparser.add_argument(
-        "--replace-rank",
+        "--preserve-rank",
         action="store_true",
         default=False,
         help=(
-            "Delete existing rank:cpe, rank:vendor_product, and the missing-word set "
-            "before importing."
+            "Keep existing rank:cpe, rank:vendor_product, and the missing-word set "
+            "instead of resetting them before importing."
         ),
     )
     argparser.add_argument(
@@ -81,9 +81,14 @@ if __name__ == "__main__":
         print(f"Using existing file {cvelist_path} ...")
         cvelist_file = cvelist_path
 
-    if args.replace_rank:
-        removed = rdb.delete("rank:cpe", "rank:vendor_product", args.missing_word_set)
-        print(f"Deleted {removed} existing rank key(s) from the database.")
+    if args.preserve_rank:
+        print(
+            "Preserving existing rank:cpe, rank:vendor_product, and "
+            f"{args.missing_word_set}."
+        )
+    else:
+        removed = reset_rank_state(rdb, args.missing_word_set)
+        print(f"Reset {removed} existing rank key(s) before importing.")
 
     handler = CVEListV5Handler(
         rdb,
