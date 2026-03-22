@@ -2,15 +2,12 @@
 # -*- coding: utf-8 -*-
 
 import argparse
-import os
-import sys
 import json
 
-runPath = os.path.dirname(os.path.realpath(__file__))
-sys.path.append(os.path.join(runPath, ".."))
-from lib.cpeguesser import CPEGuesser
+from cpe_guesser import CPEGuesser
 
-if __name__ == "__main__":
+
+def main():
     parser = argparse.ArgumentParser(
         description="Find potential CPE names from a list of keyword(s) and return a JSON of the results"
     )
@@ -30,12 +27,18 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     cpeGuesser = CPEGuesser()
-    r = cpeGuesser.guessCpe(args.word)
+    cpes = cpeGuesser.guessCpe(args.word)
+
     if not args.unique:
-        print(json.dumps(r))
+        print(json.dumps(cpes))
     else:
-        try:
-            r = r[:1][0][1]
-        except:
-            r = []
+        r = []
+        if len(cpes) > 0:
+            if len(cpes[0]) >= 2:
+                cpes = cpes[0][1]
+
         print(json.dumps(r))
+
+
+if __name__ == "__main__":
+    main()

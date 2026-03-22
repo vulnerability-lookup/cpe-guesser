@@ -1,4 +1,5 @@
 import xml.sax
+
 from .base import CPEImportHandler
 
 
@@ -18,26 +19,26 @@ class XMLCPEHandler(CPEImportHandler, xml.sax.ContentHandler):
         parser.setContentHandler(self)
         parser.parse(filepath)
 
-    def startElement(self, tag, attributes):
-        if tag == "cpe-23:cpe23-item":
-            self.record["cpe-23"] = attributes["name"]
-        if tag == "title":
+    def startElement(self, name, attrs):
+        if name == "cpe-23:cpe23-item":
+            self.record["cpe-23"] = attrs["name"]
+        if name == "title":
             self.title_seen = True
-        if tag == "reference":
-            self.refs.append(attributes["href"])
+        if name == "reference":
+            self.refs.append(attrs["href"])
 
-    def characters(self, data):
+    def characters(self, content) -> None:
         if self.title_seen:
-            self.title += data
+            self.title += content
 
-    def endElement(self, tag):
-        if tag == "title":
+    def endElement(self, name):
+        if name == "title":
             self.record["title"] = self.title
             self.title = ""
             self.title_seen = False
-        if tag == "references":
+        if name == "references":
             self.record["refs"] = self.refs
             self.refs = []
-        if tag == "cpe-item":
+        if name == "cpe-item":
             self.process_cpe(self.record["cpe-23"])
             self.record = {}

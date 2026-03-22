@@ -1,20 +1,21 @@
 import json
 import tarfile
+
 from .base import CPEImportHandler
 
 
 class NVDCPEHandler(CPEImportHandler):
     """Handler for NVD CPE Dictionary 2.0 (JSON format)"""
 
-    def _parse_impl(self, path):
+    def _parse_impl(self, filepath):
         """Parse both JSON files and tar archives containing JSON files."""
-        if tarfile.is_tarfile(path):
-            self.process_tar_archive(path)
-        elif path.endswith(".json"):
-            with open(path, "r", encoding="utf-8") as f:
+        if tarfile.is_tarfile(filepath):
+            self.process_tar_archive(filepath)
+        elif filepath.endswith(".json"):
+            with open(filepath, "r", encoding="utf-8") as f:
                 self.process_json_file(f)
         else:
-            raise ValueError(f"Unsupported file type: {path}")
+            raise ValueError(f"Unsupported file type: {filepath}")
 
     def process_tar_archive(self, path):
         """Process each JSON file in a tar archive."""
@@ -22,8 +23,10 @@ class NVDCPEHandler(CPEImportHandler):
             for member in tar.getmembers():
                 if member.isfile() and member.name.endswith(".json"):
                     print(f"{self.__class__.__name__} parsing {member.name}...")
-                    with tar.extractfile(member) as f:
-                        self.process_json_file(f)
+                    extracted = tar.extractfile(member)
+                    if extracted is not None:
+                        with extracted as f:
+                            self.process_json_file(f)
 
     def process_json_file(self, fileobj):
         """Process a single JSON file."""

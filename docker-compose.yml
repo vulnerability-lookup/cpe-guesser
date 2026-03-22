@@ -1,12 +1,10 @@
-version: "3"
 services:
   server:
     container_name: cpe-guesser
     image: cpe-guesser:1.0
-    build: ..
+    build: .
     volumes:
       - ../data/:/data/:rw
-      - ./settings.yaml:/app/config/settings.yaml
     ports:
       - 8000:8000
     depends_on:

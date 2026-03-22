@@ -1,9 +1,0 @@
-server:
-  port: 8000
-valkey:
-  host: valkey
-  port: 6379
-  db: 8
-cpe:
-  path: '/data/nvdcpe-2.0.tar'
-  source: 'https://nvd.nist.gov/feeds/json/cpe/2.0/nvdcpe-2.0.tar.gz'

@@ -1,0 +1,22 @@
+[project]
+name = "cpe-guesser"
+version = "0.1.0"
+description = "Library and tools to guess and manage CPE (Common Platform Enumeration) entries"
+readme = "README.md"
+requires-python = ">=3.13"
+dependencies = [
+    "dynaconf>=3.2.12",
+    "falcon>=4.2.0",
+    "pydantic>=2.12.5",
+    "spectree>=2.0.1",
+    "valkey[libvalkey]>=6.1.1",
+]
+
+[build-system]
+requires = ["uv_build>=0.9.26,<0.10.0"]
+build-backend = "uv_build"
+
+[project.scripts]
+cpe-import = "cpe_guesser.bin.importer:main"
+cpe-lookup = "cpe_guesser.bin.lookup:main"
+cpe-server = "cpe_guesser.bin.server:main"

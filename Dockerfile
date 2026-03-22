@@ -1,18 +1,45 @@
 # syntax=docker/dockerfile:1
 
-FROM python:3.8-slim-buster
+FROM alpine:latest
+
+COPY . /app
+
+RUN <<EOF
+apk update
+apk add py3-pip
+pip install pipx --break-system-packages
+pipx install --global uv
+EOF
+
+# Disable development dependencies
+ENV UV_NO_DEV=1
 
 WORKDIR /app
 
-COPY REQUIREMENTS REQUIREMENTS
-RUN pip3 install -r REQUIREMENTS
+RUN uv sync --locked
 
-COPY bin bin
-COPY etc /etc
-COPY lib lib
-COPY docker/entrypoint.sh entrypoint.sh
+# configuration
+COPY <<EOF /app/config/settings.yaml
+server:
+  port: 8000
+valkey:
+  host: valkey
+  port: 6379
+  db: 8
+cpe:
+  path: '/data/nvdcpe-2.0.tar'
+  source: 'https://nvd.nist.gov/feeds/json/cpe/2.0/nvdcpe-2.0.tar.gz'
+EOF
 
-RUN mkdir /app/config
+# entrypoint script
+COPY <<EOF entrypoint.sh
+#!/bin/ash
+set -e
+
+uv run cpe-import
+uv run cpe-server
+EOF
+
 RUN chmod u+x entrypoint.sh
 
 ENTRYPOINT ["/app/entrypoint.sh"]

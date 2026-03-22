@@ -1,9 +1,0 @@
-[Unit]
-Description=circl dot lu CPE guesser service trigger timer
-
-[Timer]
-Unit=cpeguesser.service
-OnCalendar=*-*-* 0/12:00:00
-
-[Install]
-WantedBy=timers.target

@@ -1,21 +1,18 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
-import os
-import sys
-import falcon
-from wsgiref.simple_server import make_server
 import json
+import sys
+from wsgiref.simple_server import make_server
+
+import falcon
 from dynaconf import Dynaconf
+
+from cpe_guesser import CPEGuesser
 
 # Configuration
 settings = Dynaconf(settings_files=["../config/settings.yaml"])
 port = settings.get("server.port", 8000)
-
-runPath = os.path.dirname(os.path.realpath(__file__))
-sys.path.append(os.path.join(runPath, ".."))
-
-from lib.cpeguesser import CPEGuesser
 
 
 class Search:
@@ -59,14 +56,17 @@ class Unique:
             return
 
         cpeGuesser = CPEGuesser()
-        try:
-            r = cpeGuesser.guessCpe(q["query"])[:1][0][1]
-        except:
-            r = []
+        cpes = cpeGuesser.guessCpe(q["query"])[:1][0][1]
+
+        r = []
+        if len(cpes) > 0:
+            if len(cpes[0]) >= 2:
+                r = cpes[0][1]
+
         resp.media = r
 
 
-if __name__ == "__main__":
+def main():
     app = falcon.App()
     app.add_route("/search", Search())
     app.add_route("/unique", Unique())
@@ -80,3 +80,7 @@ if __name__ == "__main__":
         sys.exit(1)
     except KeyboardInterrupt:
         sys.exit(0)
+
+
+if __name__ == "__main__":
+    main()

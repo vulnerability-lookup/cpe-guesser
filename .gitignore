@@ -1,6 +1,4 @@
-bin/__pycache__/
-lib/__pycache__/
-lib/cpeimport/__pycache__/
+**/__pycache__
 data/*.gz
 data/*.tar
 data/*.json

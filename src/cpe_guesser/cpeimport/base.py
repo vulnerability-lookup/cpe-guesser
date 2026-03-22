@@ -27,7 +27,7 @@ class CPEImportHandler(ABC):
         self._parse_impl(filepath)
 
         elapsed = round(time.time() - self.start_time)
-        msg = f"Finished {label}: {self.itemcount} items " f"({self.wordcount} words)"
+        msg = f"Finished {label}: {self.itemcount} items ({self.wordcount} words)"
         if self.skipped:
             msg += f", {self.skipped} skipped"
         msg += f" in {elapsed} seconds."
@@ -48,17 +48,31 @@ class CPEImportHandler(ABC):
         self.rdb.zadd(f"s:{word}", {cpe: 1}, incr=True)
         self.rdb.zadd("rank:cpe", {cpe: 1}, incr=True)
 
+    def batch_insert(self, word_cpe_pairs):
+        pipe = self.rdb.pipeline()
+        for word, cpe in word_cpe_pairs:
+            pipe.sadd(f"w:{word}", cpe)
+            pipe.zadd(f"s:{word}", {cpe: 1}, incr=True)
+            pipe.zadd("rank:cpe", {cpe: 1}, incr=True)
+        pipe.execute()
+
     def process_cpe(self, cpe):
         """Shared vendor/product → Redis word indexing logic."""
         to_insert = self.CPEExtractor(cpe=cpe)
 
+        word_cpe_pairs = []
+
         for word in self.canonize(to_insert["vendor"]):
-            self.insert(word=word, cpe=to_insert["cpeline"])
+            # self.insert(word=word, cpe=to_insert["cpeline"])
+            word_cpe_pairs.append((word, to_insert["cpeline"]))
             self.wordcount += 1
 
         for word in self.canonize(to_insert["product"]):
-            self.insert(word=word, cpe=to_insert["cpeline"])
+            # self.insert(word=word, cpe=to_insert["cpeline"])
+            word_cpe_pairs.append((word, to_insert["cpeline"]))
             self.wordcount += 1
+
+        self.batch_insert(word_cpe_pairs)
 
         self.itemcount += 1
 

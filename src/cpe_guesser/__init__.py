@@ -1,5 +1,5 @@
-#!/usr/bin/env python3
 # -*- coding: utf-8 -*-
+from typing import List, Tuple
 
 import valkey
 from dynaconf import Dynaconf
@@ -20,7 +20,7 @@ class CPEGuesser:
             decode_responses=True,
         )
 
-    def guessCpe(self, words):
+    def guessCpe(self, words) -> List[Tuple[int, str]]:
         k = []
         for keyword in words:
             k.append(f"w:{keyword.lower()}")
@@ -29,7 +29,7 @@ class CPEGuesser:
         cpes = []
         for x in reversed(range(maxinter)):
             ret = self.rdb.sinter(k[x])
-            cpes.append(list(ret))
+            cpes.append(list(ret))  # ty:ignore[invalid-argument-type]
         result = set(cpes[0]).intersection(*cpes)
 
         ranked = []
@@ -37,5 +37,4 @@ class CPEGuesser:
         for cpe in result:
             rank = self.rdb.zrank("rank:cpe", cpe)
             ranked.append((rank, cpe))
-
         return sorted(ranked, reverse=True)
