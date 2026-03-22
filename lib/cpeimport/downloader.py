@@ -18,6 +18,10 @@ class CPEDownloader:
             print(f"Using existing file {self.dest_path} ...")
             return self.dest_path
 
+        dest_dir = os.path.dirname(self.dest_path)
+        if dest_dir:
+            os.makedirs(dest_dir, exist_ok=True)
+
         print(f"Downloading CPE data from {self.url} ...")
         download_path = (
             self.dest_path + ".gz" if self.url.endswith(".gz") else self.dest_path

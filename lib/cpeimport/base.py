@@ -37,9 +37,22 @@ class CPEImportHandler(ABC):
 
     def CPEExtractor(self, cpe):
         fields = cpe.split(":")
-        vendor = fields[3]
-        product = fields[4]
-        cpeline = ":".join(fields[:5])
+        if cpe.startswith("cpe:/"):
+            if len(fields) < 4:
+                raise ValueError(f"Invalid legacy CPE: {cpe}")
+            part = fields[1].lstrip("/") or "*"
+            vendor = fields[2]
+            product = fields[3]
+            cpeline = f"cpe:2.3:{part}:{vendor}:{product}"
+        else:
+            if len(fields) < 5:
+                raise ValueError(f"Invalid CPE 2.3 entry: {cpe}")
+            vendor = fields[3]
+            product = fields[4]
+            cpeline = ":".join(fields[:5])
+
+        if not vendor or not product:
+            raise ValueError(f"Invalid vendor/product tuple in CPE: {cpe}")
         return {"vendor": vendor, "product": product, "cpeline": cpeline}
 
     def canonize(self, value):
@@ -49,6 +62,7 @@ class CPEImportHandler(ABC):
         self.rdb.sadd(f"w:{word}", cpe)
         self.rdb.zadd(f"s:{word}", {cpe: 1}, incr=True)
         self.rdb.zadd("rank:cpe", {cpe: 1}, incr=True)
+        self.rdb.zadd("rank:vendor_product", {cpe: 1}, incr=True)
 
     def build_insert_words(self, cpe):
         to_insert = self.CPEExtractor(cpe=cpe)
@@ -73,11 +87,30 @@ class CPEImportHandler(ABC):
                 pipeline.sadd(f"w:{word}", cpeline)
                 pipeline.zadd(f"s:{word}", {cpeline: 1}, incr=True)
                 pipeline.zadd("rank:cpe", {cpeline: 1}, incr=True)
+                pipeline.zadd("rank:vendor_product", {cpeline: 1}, incr=True)
                 wordcount += 1
             itemcount += 1
 
         pipeline.execute()
         return itemcount, wordcount
+
+    def process_rank_batch(self, cpes, rdb=None):
+        """Insert only vendor/product tuple ranking data for a batch of CPEs."""
+        if not cpes:
+            return 0, 0
+
+        client = rdb or self.rdb
+        pipeline = client.pipeline(transaction=False)
+        itemcount = 0
+
+        for cpe in cpes:
+            cpeline = self.CPEExtractor(cpe=cpe)["cpeline"]
+            pipeline.zadd("rank:cpe", {cpeline: 1}, incr=True)
+            pipeline.zadd("rank:vendor_product", {cpeline: 1}, incr=True)
+            itemcount += 1
+
+        pipeline.execute()
+        return itemcount, 0
 
     def record_progress(self, itemcount, wordcount):
         self.itemcount += itemcount
