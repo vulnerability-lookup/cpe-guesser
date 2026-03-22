@@ -23,7 +23,7 @@ curl -s -X POST http://localhost:8000/search -d '{"query": ["tomcat"]}' | jq .
 
 1. `git clone https://github.com/cve-search/cpe-guesser.git`
 2. `cd cpe-guesser`
-3. Download the CPE dictionary & populate the database with `python3 ./bin/import.py`.
+3. Download the CPE dictionary & populate the database with `python3 ./bin/import.py` (the NVD JSON importer now uses parallel workers by default; tune with `--workers` and `--batch-size` if needed).
 4. Take a cup of black or green tea ().
 5. `python3 ./bin/server.py` to run the local HTTP server.
 
