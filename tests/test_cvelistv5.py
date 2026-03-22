@@ -2,7 +2,7 @@ import io
 import json
 import unittest
 
-from lib.cpeimport.cvelistv5 import CVEListV5Handler
+from lib.cpeimport.cvelistv5 import CVEListV5Handler, reset_rank_state
 
 
 class FakePipeline:
@@ -32,6 +32,14 @@ class FakeRDB:
         self.sets = {}
         self.sorted_sets = {}
 
+    def delete(self, *keys):
+        removed = 0
+        for key in keys:
+            removed += int(key in self.sets or key in self.sorted_sets)
+            self.sets.pop(key, None)
+            self.sorted_sets.pop(key, None)
+        return removed
+
     def pipeline(self, transaction=False):
         return FakePipeline(self)
 
@@ -51,6 +59,21 @@ class FakeRDB:
 
 
 class CVEListV5HandlerTestCase(unittest.TestCase):
+    def test_reset_rank_state_clears_previous_import_data(self):
+        rdb = FakeRDB()
+        rdb.zadd("rank:cpe", {"cpe:2.3:a:acme:widget": 3})
+        rdb.zadd("rank:vendor_product", {"cpe:2.3:a:acme:widget": 3})
+        rdb.sadd("set:missing_words_from_cvelistv5", "widget")
+        rdb.sadd("w:widget", "cpe:2.3:a:acme:widget")
+
+        removed = reset_rank_state(rdb)
+
+        self.assertEqual(removed, 3)
+        self.assertNotIn("rank:cpe", rdb.sorted_sets)
+        self.assertNotIn("rank:vendor_product", rdb.sorted_sets)
+        self.assertNotIn("set:missing_words_from_cvelistv5", rdb.sets)
+        self.assertIn("w:widget", rdb.sets)
+
     def test_extracts_cpes_from_metadata_and_configurations(self):
         record = {
             "containers": {
