@@ -12,30 +12,41 @@ valkey_db = settings.get("valkey.db", 8)
 
 
 class CPEGuesser:
-    def __init__(self):
-        self.rdb = valkey.Valkey(
+    def __init__(self, rdb=None):
+        self.rdb = rdb or valkey.Valkey(
             host=valkey_host,
             port=valkey_port,
             db=valkey_db,
             decode_responses=True,
         )
 
+    def _word_score(self, word, cpe):
+        score = self.rdb.zscore(f"s:{word}", cpe)
+        return score or 0
+
+    def _rank_score(self, cpe):
+        score = self.rdb.zscore("rank:cpe", cpe)
+        return score or 0
+
     def guessCpe(self, words):
         k = []
         for keyword in words:
             k.append(f"w:{keyword.lower()}")
 
-        maxinter = len(k)
-        cpes = []
-        for x in reversed(range(maxinter)):
-            ret = self.rdb.sinter(k[x])
-            cpes.append(list(ret))
-        result = set(cpes[0]).intersection(*cpes)
+        if not k:
+            return []
+
+        result = self.rdb.sinter(*k)
+        if not result:
+            return []
 
         ranked = []
+        lowered_words = [word.lower() for word in words]
 
         for cpe in result:
-            rank = self.rdb.zrank("rank:cpe", cpe)
-            ranked.append((rank, cpe))
+            search_score = sum(self._word_score(word, cpe) for word in lowered_words)
+            rank_score = self._rank_score(cpe)
+            total_score = search_score + rank_score
+            ranked.append((total_score, rank_score, cpe))
 
-        return sorted(ranked, reverse=True)
+        return [(total_score, cpe) for total_score, _, cpe in sorted(ranked, reverse=True)]
