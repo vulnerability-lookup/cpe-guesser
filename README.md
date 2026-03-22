@@ -24,7 +24,7 @@ curl -s -X POST http://localhost:8000/search -d '{"query": ["tomcat"]}' | jq .
 1. `git clone https://github.com/cve-search/cpe-guesser.git`
 2. `cd cpe-guesser`
 3. Download the CPE dictionary & populate the database with `python3 ./bin/import.py` (the NVD JSON importer now uses parallel workers by default; tune with `--workers` and `--batch-size` if needed).
-4. Optionally enrich the vendor/product ranking with CVE v5 data using `python3 ./bin/import_cvelistv5.py`. This downloads `./data/cvelistv5.ndjson` only when missing unless you pass `--download`, and it now resets `rank:cpe`, `rank:vendor_product`, and `set:missing_words_from_cvelistv5` before each import unless you opt into `--preserve-rank`. Use `--index-words` if you also want to populate `w:<word>` and `s:<word>` from CVE v5 data, and review `set:missing_words_from_cvelistv5` for words that were not already indexed in Valkey.
+4. Optionally enrich the vendor/product ranking with [CVE v5 data dumps](https://vulnerability.circl.lu/dumps/) using `python3 ./bin/import_cvelistv5.py`. This downloads `./data/cvelistv5.ndjson` only when missing unless you pass `--download`, and it now resets `rank:cpe`, `rank:vendor_product`, and `set:missing_words_from_cvelistv5` before each import unless you opt into `--preserve-rank`. Use `--index-words` if you also want to populate `w:<word>` and `s:<word>` from CVE v5 data, and review `set:missing_words_from_cvelistv5` for words that were not already indexed in Valkey.
 5. Take a cup of black or green tea ().
 6. `python3 ./bin/server.py` to run the local HTTP server.
 
@@ -219,8 +219,9 @@ CPE values from both affected-product metadata and vulnerable configuration bloc
 Software is open source and released under a 2-Clause BSD License
 
 ~~~
-  Copyright (C) 2021-2025 Alexandre Dulaunoy
-  Copyright (C) 2021-2025 Esa Jokinen
+  Copyright (C) 2021-2026 Alexandre Dulaunoy
+  Copyright (C) 2021-2026 Esa Jokinen
+  Copyright (C) 2026 CIRCL - Computer Incident Response Center Luxembourg
 ~~~
 
 We welcome contributions! All contributors collectively own the CPE Guesser project. By contributing, contributors also acknowledge the [Developer Certificate of Origin](https://developercertificate.org/) when submitting pull requests or using other methods of contribution.
