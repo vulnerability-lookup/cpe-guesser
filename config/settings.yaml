@@ -7,3 +7,6 @@ valkey:
 cpe:
   path: './data/nvdcpe-2.0.tar'
   source: 'https://nvd.nist.gov/feeds/json/cpe/2.0/nvdcpe-2.0.tar.gz'
+cvelistv5:
+  path: './data/cvelistv5.ndjson'
+  source: 'https://vulnerability.circl.lu/dumps/cvelistv5.ndjson'
