@@ -10,7 +10,13 @@ import valkey
 from dynaconf import Dynaconf
 
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
-from lib.cpeimport import CPEDownloader, CVEListV5Handler, reset_rank_state
+from lib.cpeimport import (
+    CPEDownloader,
+    CVEListV5Handler,
+    DEFAULT_MISSING_PRODUCT_SET,
+    DEFAULT_MISSING_VENDOR_SET,
+    reset_rank_state,
+)
 
 # Configuration
 settings = Dynaconf(settings_files=["../config/settings.yaml"])
@@ -21,8 +27,6 @@ cvelist_source = settings.get(
 valkey_host = settings.get("valkey.host", "127.0.0.1")
 valkey_port = settings.get("valkey.port", 6379)
 valkey_db = settings.get("valkey.db", 8)
-
-DEFAULT_MISSING_WORD_SET = "set:missing_words_from_cvelistv5"
 
 rdb = valkey.Valkey(host=valkey_host, port=valkey_port, db=valkey_db)
 
@@ -43,8 +47,8 @@ if __name__ == "__main__":
         action="store_true",
         default=False,
         help=(
-            "Keep existing rank:cpe, rank:vendor_product, and the missing-word set "
-            "instead of resetting them before importing."
+            "Keep existing rank:cpe, rank:vendor_product, and the missing vendor/product "
+            "sets instead of resetting them before importing."
         ),
     )
     argparser.add_argument(
@@ -57,11 +61,19 @@ if __name__ == "__main__":
         ),
     )
     argparser.add_argument(
-        "--missing-word-set",
-        default=DEFAULT_MISSING_WORD_SET,
+        "--missing-vendor-set",
+        default=DEFAULT_MISSING_VENDOR_SET,
         help=(
-            "Valkey set name used to store words seen in CVE v5 CPEs that were "
-            "not already present in w:<word>."
+            "Valkey set name used to store vendor words seen in CVE v5 CPEs that "
+            "were not already present in w:<word>."
+        ),
+    )
+    argparser.add_argument(
+        "--missing-product-set",
+        default=DEFAULT_MISSING_PRODUCT_SET,
+        help=(
+            "Valkey set name used to store product words seen in CVE v5 CPEs that "
+            "were not already present in w:<word>."
         ),
     )
     args = argparser.parse_args()
@@ -84,16 +96,21 @@ if __name__ == "__main__":
     if args.preserve_rank:
         print(
             "Preserving existing rank:cpe, rank:vendor_product, and "
-            f"{args.missing_word_set}."
+            f"{args.missing_vendor_set}/{args.missing_product_set}."
         )
     else:
-        removed = reset_rank_state(rdb, args.missing_word_set)
+        removed = reset_rank_state(
+            rdb,
+            args.missing_vendor_set,
+            args.missing_product_set,
+        )
         print(f"Reset {removed} existing rank key(s) before importing.")
 
     handler = CVEListV5Handler(
         rdb,
         index_words=args.index_words,
-        missing_word_key=args.missing_word_set,
+        missing_vendor_key=args.missing_vendor_set,
+        missing_product_key=args.missing_product_set,
     )
     label = f"{handler.__class__.__name__}[{os.path.basename(cvelist_file)}]"
     print(f"Using {handler.__class__.__name__} to parse file {cvelist_file}...")
@@ -101,10 +118,12 @@ if __name__ == "__main__":
 
     rank_size = rdb.zcard("rank:cpe")
     alias_size = rdb.zcard("rank:vendor_product")
-    missing_word_count = rdb.scard(args.missing_word_set)
+    missing_vendor_count = rdb.scard(args.missing_vendor_set)
+    missing_product_count = rdb.scard(args.missing_product_set)
     print(
         "Done! "
         f"{rank_size} vendor/product tuples stored in rank:cpe, "
-        f"{alias_size} in rank:vendor_product, and "
-        f"{missing_word_count} words tracked in {args.missing_word_set}."
+        f"{alias_size} in rank:vendor_product, "
+        f"{missing_vendor_count} vendor words tracked in {args.missing_vendor_set}, "
+        f"and {missing_product_count} product words tracked in {args.missing_product_set}."
     )

@@ -24,7 +24,7 @@ curl -s -X POST http://localhost:8000/search -d '{"query": ["tomcat"]}' | jq .
 1. `git clone https://github.com/cve-search/cpe-guesser.git`
 2. `cd cpe-guesser`
 3. Download the CPE dictionary & populate the database with `python3 ./bin/import.py` (the NVD JSON importer now uses parallel workers by default; tune with `--workers` and `--batch-size` if needed).
-4. Optionally enrich the vendor/product ranking with [CVE v5 data dumps](https://vulnerability.circl.lu/dumps/) using `python3 ./bin/import_cvelistv5.py`. This downloads `./data/cvelistv5.ndjson` only when missing unless you pass `--download`, and it now resets `rank:cpe`, `rank:vendor_product`, and `set:missing_words_from_cvelistv5` before each import unless you opt into `--preserve-rank`. Use `--index-words` if you also want to populate `w:<word>` and `s:<word>` from CVE v5 data, and review `set:missing_words_from_cvelistv5` for words that were not already indexed in Valkey.
+4. Optionally enrich the vendor/product ranking with [CVE v5 data dumps](https://vulnerability.circl.lu/dumps/) using `python3 ./bin/import_cvelistv5.py`. This downloads `./data/cvelistv5.ndjson` only when missing unless you pass `--download`, and it now resets `rank:cpe`, `rank:vendor_product`, `set:missing_vendors_from_cvelistv5`, and `set:missing_products_from_cvelistv5` before each import unless you opt into `--preserve-rank`. Use `--index-words` if you also want to populate `w:<word>` and `s:<word>` from CVE v5 data, and review the missing vendor/product sets for words that were not already indexed in Valkey.
 5. Take a cup of black or green tea ().
 6. `python3 ./bin/server.py` to run the local HTTP server.
 
@@ -204,7 +204,7 @@ cpe (vendor:product) per version to give a probability of the CPE appearance.
 
 You can also build the ranking directly from the CVE v5 NDJSON dump. The importer scans the full record recursively so it can pick up
 CPE values from both affected-product metadata and vulnerable configuration blocks, then increments the `rank:cpe` and
-`rank:vendor_product` sorted sets using the normalized `cpe:2.3:<part>:<vendor>:<product>` tuple. It also records any vendor/product words whose `w:<word>` set does not already exist into `set:missing_words_from_cvelistv5`, and `--index-words` lets the CVE v5 importer populate `w:<word>` and `s:<word>` just like the NVD importer.
+`rank:vendor_product` sorted sets using the normalized `cpe:2.3:<part>:<vendor>:<product>` tuple. It also records vendor words whose `w:<word>` set does not already exist into `set:missing_vendors_from_cvelistv5` and product words into `set:missing_products_from_cvelistv5`, and `--index-words` lets the CVE v5 importer populate `w:<word>` and `s:<word>` just like the NVD importer.
 
 ### Valkey structure
 
@@ -212,7 +212,8 @@ CPE values from both affected-product metadata and vulnerable configuration bloc
 - `s:<word>` sorted set with a score depending of the number of appearance
 - `rank:cpe` sorted set of common `vendor:product` tuples
 - `rank:vendor_product` alias sorted set of the same tuple ranking, populated by both importers
-- `set:missing_words_from_cvelistv5` set of vendor/product words seen in CVE v5 CPEs that were not already present as `w:<word>` keys before the record was processed
+- `set:missing_vendors_from_cvelistv5` set of vendor words seen in CVE v5 CPEs that were not already present as `w:<word>` keys before the record was processed
+- `set:missing_products_from_cvelistv5` set of product words seen in CVE v5 CPEs that were not already present as `w:<word>` keys before the record was processed
 
 ## License
 
