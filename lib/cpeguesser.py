@@ -2,6 +2,7 @@
 # -*- coding: utf-8 -*-
 
 import valkey
+import re
 from dynaconf import Dynaconf
 
 # Configuration
@@ -28,9 +29,17 @@ class CPEGuesser:
         score = self.rdb.zscore("rank:cpe", cpe)
         return score or 0
 
+    def _normalize_keywords(self, words):
+        normalized = []
+        for word in words:
+            parts = [part for part in re.split(r"[\s_-]+", word.lower()) if part]
+            normalized.extend(parts)
+        return normalized
+
     def guessCpe(self, words):
         k = []
-        for keyword in words:
+        normalized_words = self._normalize_keywords(words)
+        for keyword in normalized_words:
             k.append(f"w:{keyword.lower()}")
 
         if not k:
@@ -41,7 +50,7 @@ class CPEGuesser:
             return []
 
         ranked = []
-        lowered_words = [word.lower() for word in words]
+        lowered_words = normalized_words
 
         for cpe in result:
             search_score = sum(self._word_score(word, cpe) for word in lowered_words)
