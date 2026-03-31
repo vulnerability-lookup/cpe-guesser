@@ -83,6 +83,20 @@ class CPEGuesserTestCase(unittest.TestCase):
             ],
         )
 
+    def test_guess_cpe_normalizes_dashes_underscores_and_spaces(self):
+        rdb = FakeRDB()
+        launcher = "cpe:2.3:a:acme:rocket_launcher"
+
+        for key in ("w:acme", "w:rocket", "w:launcher"):
+            rdb.sadd(key, launcher)
+            rdb.zadd(f"s:{key[2:]}", {launcher: 1})
+
+        guesser = CPEGuesser(rdb=rdb)
+
+        self.assertEqual(guesser.guessCpe(["acme", "rocket-launcher"]), [(3, launcher)])
+        self.assertEqual(guesser.guessCpe(["acme", "rocket_launcher"]), [(3, launcher)])
+        self.assertEqual(guesser.guessCpe(["acme", "rocket launcher"]), [(3, launcher)])
+
 
 if __name__ == "__main__":
     unittest.main()

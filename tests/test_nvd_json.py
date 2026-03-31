@@ -103,6 +103,32 @@ class NVDCPEHandlerTestCase(unittest.TestCase):
         self.assertEqual(serial_rdb.sets, parallel_rdb.sets)
         self.assertEqual(serial_rdb.sorted_sets, parallel_rdb.sorted_sets)
 
+    def test_import_splits_hyphenated_vendor_and_product_words(self):
+        rdb = FakeRDB()
+        handler = NVDCPEHandler(rdb, workers=1, batch_size=10)
+        payload = io.StringIO(
+            json.dumps(
+                {
+                    "products": [
+                        {
+                            "cpe": {
+                                "cpeName": (
+                                    "cpe:2.3:a:foo-bar:rocket-launcher:1.0:*:*:*:*:*:*:*"
+                                )
+                            }
+                        }
+                    ]
+                }
+            )
+        )
+
+        handler.process_json_file(payload)
+
+        self.assertEqual(rdb.sets["w:foo"], {"cpe:2.3:a:foo-bar:rocket-launcher"})
+        self.assertEqual(rdb.sets["w:bar"], {"cpe:2.3:a:foo-bar:rocket-launcher"})
+        self.assertEqual(rdb.sets["w:rocket"], {"cpe:2.3:a:foo-bar:rocket-launcher"})
+        self.assertEqual(rdb.sets["w:launcher"], {"cpe:2.3:a:foo-bar:rocket-launcher"})
+
 
 if __name__ == "__main__":
     unittest.main()

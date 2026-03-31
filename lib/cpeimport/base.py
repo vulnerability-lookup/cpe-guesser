@@ -1,4 +1,5 @@
 import time
+import re
 from abc import ABC, abstractmethod
 
 
@@ -56,7 +57,7 @@ class CPEImportHandler(ABC):
         return {"vendor": vendor, "product": product, "cpeline": cpeline}
 
     def canonize(self, value):
-        return value.lower().split("_")
+        return [part for part in re.split(r"[\s_-]+", value.lower()) if part]
 
     def insert(self, word, cpe):
         self.rdb.sadd(f"w:{word}", cpe)
